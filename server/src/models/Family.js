@@ -8,9 +8,26 @@ const familySchema = new mongoose.Schema(
     village: { type: String, required: true },
     taluka: { type: String, required: true },
     district: { type: String, required: true },
-    createdOn: { type: String, required: true }
+    createdOn: { type: String, required: true },
+    passwordHash: { type: String, required: true, select: false }
   },
   { collection: "families", timestamps: false }
 );
+
+familySchema.set("toJSON", {
+  transform(_doc, ret) {
+    delete ret.passwordHash;
+    delete ret.__v;
+    return ret;
+  }
+});
+
+familySchema.set("toObject", {
+  transform(_doc, ret) {
+    delete ret.passwordHash;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 export const Family = mongoose.model("Family", familySchema);

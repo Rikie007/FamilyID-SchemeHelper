@@ -52,12 +52,19 @@ export async function listApplications(query) {
   if (query.status) q.status = query.status;
   if (query.schemeId) q.schemeId = query.schemeId;
   if (query.familyId) q.familyId = query.familyId;
-  return Application.find(q).sort({ appliedOn: -1 }).lean();
+  const rows = await Application.find(q).sort({ appliedOn: -1 }).lean();
+  const ids = [...new Set(rows.map((r) => r.schemeId))];
+  const schemes = ids.length ? await Scheme.find({ schemeId: { $in: ids } }).lean() : [];
+  const names = Object.fromEntries(schemes.map((s) => [s.schemeId, s.name]));
+  return rows.map((r) => ({ ...r, schemeName: names[r.schemeId] || r.schemeId }));
 }
 
-export async function decideApplication(applicationId, action, rejectNote, officerId) {
+export async function decideApplication(applicationId, action, rejectNote, officerId, allowedSchemeId) {
   const app = await Application.findOne({ applicationId });
   if (!app) throw new HttpError(404, "Application not found");
+  if (allowedSchemeId && app.schemeId !== allowedSchemeId) {
+    throw new HttpError(403, "This desk can only decide applications for its own scheme");
+  }
   if (app.status !== "PENDING") throw new HttpError(422, "Application already decided");
   const on = today();
   if (action === "approve") {
@@ -96,7 +103,7 @@ export async function listBeneficiaries(query) {
   return Beneficiary.find(q).sort({ enrolledOn: -1 }).lean();
 }
 
-export async function familyDossier(familyId, { includeHistory = true } = {}) {
+export async function familyDossier(familyId, { includeHistory = true, schemeId } = {}) {
   const family = await Family.findOne({ familyId }).lean();
   if (!family) throw new HttpError(404, "Family not found");
   const head = await Member.findOne({ memberId: family.headMemberId }).lean();
@@ -115,8 +122,9 @@ export async function familyDossier(familyId, { includeHistory = true } = {}) {
       relationToHead: await relationToHead(m, head)
     });
   }
-  const applications = await Application.find({ familyId }).sort({ appliedOn: -1 }).lean();
-  const beneficiaries = await Beneficiary.find({ familyId }).lean();
+  const schemeFilter = schemeId ? { familyId, schemeId } : { familyId };
+  const applications = await Application.find(schemeFilter).sort({ appliedOn: -1 }).lean();
+  const beneficiaries = await Beneficiary.find(schemeFilter).lean();
   return { family, head, members, applications, beneficiaries };
 }
 

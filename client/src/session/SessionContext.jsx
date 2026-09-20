@@ -1,32 +1,38 @@
 import { createContext, useContext, useMemo, useState } from "react";
 
+const STORAGE_KEY = "gj-family-session";
 const SessionContext = createContext(null);
 
-const DEFAULTS = {
-  HEAD: { familyId: "GJ-F-48291753-6", officerId: "" },
-  REGISTRY: { familyId: "", officerId: "REG-1" },
-  SCHEME_CREATOR: { familyId: "", officerId: "CRE-1" },
-  SCHEME_OFFICER: { familyId: "", officerId: "SO-1" }
-};
+function readStored() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.role) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 export function SessionProvider({ children }) {
-  const [role, setRole] = useState("HEAD");
-  const [familyId, setFamilyId] = useState(DEFAULTS.HEAD.familyId);
-  const [officerId, setOfficerId] = useState("");
+  const [session, setSession] = useState(() => readStored());
 
-  function changeRole(next) {
-    setRole(next);
-    setFamilyId(DEFAULTS[next].familyId);
-    setOfficerId(DEFAULTS[next].officerId);
-  }
+  const value = useMemo(() => {
+    function login(next) {
+      setSession(next);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    }
 
-  const session = useMemo(() => ({ role, familyId, officerId }), [role, familyId, officerId]);
+    function logout() {
+      setSession(null);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
 
-  return (
-    <SessionContext.Provider value={{ session, setFamilyId, setOfficerId, changeRole }}>
-      {children}
-    </SessionContext.Provider>
-  );
+    return { session, login, logout };
+  }, [session]);
+
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
 export function useSession() {

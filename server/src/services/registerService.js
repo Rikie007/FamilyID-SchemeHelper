@@ -1,6 +1,7 @@
 import { Family, Member, Membership, Marriage, HeadTenure, MutationLog } from "../models/index.js";
 import { HttpError } from "../http.js";
 import { newFamilyId, newMemberId, newMutationId, today } from "../utils/ids.js";
+import { hashPassword } from "../auth/password.js";
 import { activeMembership, livingActiveMembers } from "../domain/people.js";
 
 async function logMutation(familyId, kind, officerId, proofNote) {
@@ -17,10 +18,11 @@ async function logMutation(familyId, kind, officerId, proofNote) {
 }
 
 export async function registerFamily(body, officerId) {
-  const { head, village, taluka, district, foundedOn, proofNote, members, contactPhone } = body;
+  const { head, village, taluka, district, foundedOn, proofNote, members, contactPhone, password } = body;
   if (!head?.fullName || !head?.gender || !head?.dob || !village || !taluka || !district) {
     throw new HttpError(422, "head, village, taluka, district required");
   }
+  const passwordHash = await hashPassword(password);
   const familyId = newFamilyId();
   const memberId = newMemberId();
   const on = foundedOn || today();
@@ -39,7 +41,8 @@ export async function registerFamily(body, officerId) {
     village,
     taluka,
     district,
-    createdOn: on
+    createdOn: on,
+    passwordHash
   });
   await Membership.create({
     familyId,
@@ -115,78 +118,39 @@ export async function addBirth(familyId, body, officerId) {
   return { memberId };
 }
 
-export async function addWifeInHouse(familyId, body, officerId) {
-  const { husbandMemberId, fullName, dob, fromDate, proofNote } = body;
-  if (!husbandMemberId || !fullName || !dob) throw new HttpError(422, "husbandMemberId, fullName, dob required");
-  const family = await Family.findOne({ familyId });
-  if (!family) throw new HttpError(404, "Family not found");
-  const husSeat = await Membership.findOne({ familyId, memberId: husbandMemberId, status: "ACTIVE" });
-  if (!husSeat) throw new HttpError(422, "Husband is not an active member of this house");
-  const husband = await Member.findOne({ memberId: husbandMemberId });
-  if (!husband || husband.gender !== "M") throw new HttpError(422, "Husband must be male");
-  const existing = await Marriage.findOne({ husbandMemberId, status: "ACTIVE" });
-  if (existing) throw new HttpError(409, "Husband already has an active marriage (one wife)");
-  const on = fromDate || today();
-  const wifeId = newMemberId();
-  await Member.create({
-    memberId: wifeId,
-    fullName,
-    gender: "F",
-    dob,
-    maritalStatus: "MARRIED",
-    spouseMemberId: husbandMemberId,
-    isAlive: true
-  });
-  husband.maritalStatus = "MARRIED";
-  await husband.save();
-  await Marriage.create({
-    husbandMemberId,
-    wifeMemberId: wifeId,
-    fromDate: on,
-    status: "ACTIVE"
-  });
-  await Membership.create({
-    familyId,
-    memberId: wifeId,
-    status: "ACTIVE",
-    openedHow: "MARRIAGE_IN",
-    fromDate: on
-  });
-  await logMutation(familyId, "ADD_WIFE", officerId, proofNote);
-  return { memberId: wifeId };
-}
-
 export async function recordMarriage(body, officerId) {
   const {
     memberId,
     daughterMemberId,
+    wifeMemberId,
     fromFamilyId,
     toFamilyId,
     spouseOfMemberId,
     husbandMemberId,
     fromDate,
-    proofNote,
-    fullName,
-    dob
+    proofNote
   } = body;
-  const brideId = daughterMemberId || memberId;
+  const brideId = wifeMemberId || daughterMemberId || memberId;
   const destFamilyId = toFamilyId;
   const destHusbandId = husbandMemberId || spouseOfMemberId;
-  const natalFamilyId = fromFamilyId;
+  let natalFamilyId = fromFamilyId;
 
-  if (fullName && destFamilyId && destHusbandId && !brideId) {
-    return addWifeInHouse(destFamilyId, {
-      husbandMemberId: destHusbandId,
-      fullName,
-      dob,
-      fromDate,
-      proofNote
-    }, officerId);
+  if (!brideId || !destFamilyId || !destHusbandId) {
+    throw new HttpError(422, "wife Member ID, toFamilyId, and husband Member ID required");
+  }
+  if (brideId === destHusbandId) {
+    throw new HttpError(422, "Wife and husband cannot be the same member");
   }
 
-  if (!brideId || !destFamilyId || !destHusbandId || !natalFamilyId) {
-    throw new HttpError(422, "memberId, fromFamilyId, toFamilyId, spouseOfMemberId required");
+  if (!natalFamilyId) {
+    const seat = await Membership.findOne({ memberId: brideId, status: "ACTIVE" });
+    if (!seat) throw new HttpError(422, "Wife is not an ACTIVE member on the register");
+    natalFamilyId = seat.familyId;
   }
+  if (natalFamilyId === destFamilyId) {
+    throw new HttpError(422, "Wife is already ACTIVE in this house");
+  }
+
   return marryDaughterOut(natalFamilyId, {
     daughterMemberId: brideId,
     toFamilyId: destFamilyId,

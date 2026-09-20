@@ -19,8 +19,25 @@ const NAV = {
   ]
 };
 
+const ROLE_LABEL = {
+  HEAD: "Family Head",
+  REGISTRY: "Registry Officer",
+  SCHEME_CREATOR: "Scheme Creator",
+  SCHEME_OFFICER: "Scheme Officer"
+};
+
+function deskLine(session) {
+  if (session.role === "SCHEME_OFFICER" && session.schemeId) {
+    return `Scheme Officer · ${session.schemeId}`;
+  }
+  if (session.role === "SCHEME_OFFICER") {
+    return "Scheme Manager · all schemes";
+  }
+  return `${ROLE_LABEL[session.role] || session.role}${session.familyId ? ` · ${session.familyId}` : ""}`;
+}
+
 export function GovShell({ page, setPage, children }) {
-  const { session, changeRole, setFamilyId, setOfficerId } = useSession();
+  const { session, logout } = useSession();
   const items = NAV[session.role] || [];
 
   return (
@@ -35,27 +52,14 @@ export function GovShell({ page, setPage, children }) {
           <strong>Gujarat Family ID</strong>
           <small>Citizen services · Beneficiary &amp; scheme desk · Prototype</small>
         </div>
-        <div className="role-box">
-          <label>
-            Role
-            <select value={session.role} onChange={(e) => { changeRole(e.target.value); setPage(NAV[e.target.value][0][0]); }}>
-              <option value="HEAD">Family Head</option>
-              <option value="REGISTRY">Registry Officer</option>
-              <option value="SCHEME_CREATOR">Scheme Creator</option>
-              <option value="SCHEME_OFFICER">Scheme Officer</option>
-            </select>
-          </label>
-          {session.role === "HEAD" ? (
-            <label>
-              Family ID
-              <input value={session.familyId} onChange={(e) => setFamilyId(e.target.value.trim())} />
-            </label>
-          ) : (
-            <label>
-              Officer ID
-              <input value={session.officerId} onChange={(e) => setOfficerId(e.target.value.trim())} />
-            </label>
-          )}
+        <div className="signed-in">
+          <div className="who">
+            <strong>{session.displayName}</strong>
+            <span>{deskLine(session)}</span>
+          </div>
+          <button className="ghost" type="button" onClick={logout}>
+            Sign out
+          </button>
         </div>
       </header>
       <nav className="nav">
@@ -72,3 +76,5 @@ export function GovShell({ page, setPage, children }) {
     </>
   );
 }
+
+export { NAV };

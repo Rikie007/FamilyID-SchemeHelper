@@ -106,7 +106,7 @@ button.primary { background: var(--gov-blue); color: #fff; }
 button.ok { background: var(--ok); color: #fff; }
 button.danger { background: var(--danger); color: #fff; }
 button.ghost { background: #e8eef4; color: var(--navy); }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 10px 8px; vertical-align: top; }
@@ -114,11 +114,16 @@ th { background: #eef3f8; color: var(--navy); font-size: 0.78rem; letter-spacing
 .id { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; }
 
 .chip {
-  display: inline-block;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
   border-radius: 99px;
   font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
 }
 .chip.ok { background: #d1fadf; color: #05603a; }
 .chip.warn { background: #ffead5; color: #b54708; }
@@ -140,3 +145,44 @@ th { background: #eef3f8; color: var(--navy); font-size: 0.78rem; letter-spacing
   font-size: 0.8rem;
 }
 .notice { font-size: 0.82rem; color: var(--muted); }
+
+.form-section {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.form-section:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.form-section h3 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: var(--navy);
+}
+
+.signed-in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.signed-in .who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+.signed-in .who span { opacity: 0.85; font-size: 0.75rem; }
+.signed-in button.ghost {
+  background: var(--navy-2);
+  color: #fff;
+  border: 1px solid #3b5a7a;
+}
+
+.login-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); }
+.login-body { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px 48px; }
+.login-card { width: 100%; max-width: 640px; }
+.login-card form { display: flex; flex-direction: column; gap: 14px; }
+.login-card button.primary { width: 100%; }
+.demo-accounts { margin-top: 16px; font-size: 0.82rem; color: var(--muted); }
+.demo-accounts table { font-size: 0.8rem; }
+.demo-accounts td { padding: 6px 8px; }

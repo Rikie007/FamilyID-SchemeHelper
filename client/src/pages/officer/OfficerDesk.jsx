@@ -21,7 +21,7 @@ export function OfficerInbox() {
 
   useEffect(() => {
     load().catch((e) => setError(e.message));
-  }, [session.role, status]);
+  }, [session.role, session.officerId, session.schemeId, status]);
 
   async function decide(id, action) {
     setError("");
@@ -46,8 +46,12 @@ export function OfficerInbox() {
   return (
     <>
       <div className="card">
-        <h2>Application inbox</h2>
-        <p className="lead">Verify against the register, then approve or reject.</p>
+        <h2>{session.schemeId ? `${session.schemeName || "Scheme"} inbox` : "Application inbox"}</h2>
+        <p className="lead">
+          {session.schemeId
+            ? "This desk only sees applications for its own scheme. Scheme Manager can see every scheme."
+            : "Scheme Manager: applications from every announced scheme. Verify against the register, then approve or reject."}
+        </p>
         <Banner error={error} info={info} />
         <Field label="Status filter">
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -70,7 +74,10 @@ export function OfficerInbox() {
             {rows.map((r) => (
               <tr key={r.applicationId}>
                 <td className="id">{r.applicationId}</td>
-                <td className="id">{r.schemeId}</td>
+                <td>
+                  {r.schemeName || r.schemeId}
+                  <div className="id">{r.schemeId}</div>
+                </td>
                 <td>
                   {r.familyId}
                   <div className="id">{r.memberId || "FAMILY"}</div>
@@ -100,7 +107,9 @@ export function OfficerInbox() {
 
 export function OfficerBeneficiaries() {
   const { session } = useSession();
-  const [schemeId, setSchemeId] = useState("GJ-S-FOOD-FAM-0001");
+  const scoped = Boolean(session.schemeId);
+  const [schemeId, setSchemeId] = useState(session.schemeId || "");
+  const [schemes, setSchemes] = useState([]);
   const [rows, setRows] = useState([]);
   const [error, setError] = useState("");
 
@@ -108,26 +117,42 @@ export function OfficerBeneficiaries() {
     e?.preventDefault();
     setError("");
     try {
-      setRows(await api(`/officer/beneficiaries?schemeId=${encodeURIComponent(schemeId)}`, { session }));
+      const q = scoped || !schemeId ? "" : `?schemeId=${encodeURIComponent(schemeId)}`;
+      setRows(await api(`/officer/beneficiaries${q}`, { session }));
     } catch (err) {
       setError(err.message);
     }
   }
 
   useEffect(() => {
+    if (!scoped) {
+      api("/schemes", { session }).then(setSchemes).catch(() => {});
+    }
     load().catch(() => {});
-  }, [session.role]);
+  }, [session.role, session.schemeId, session.officerId]);
 
   return (
     <div className="card">
-      <h2>Who is taking the benefit</h2>
+      <h2>{scoped ? `${session.schemeName || "Scheme"} beneficiaries` : "Who is taking the benefit"}</h2>
+      <p className="lead">
+        {scoped
+          ? "Only families enrolled on this scheme."
+          : "Scheme Manager can list every scheme, or pick one."}
+      </p>
       <Banner error={error} />
-      <form onSubmit={load} className="grid-2">
-        <Field label="Scheme ID">
-          <input value={schemeId} onChange={(e) => setSchemeId(e.target.value)} />
-        </Field>
-        <div className="actions"><button className="primary" type="submit">Load</button></div>
-      </form>
+      {scoped ? null : (
+        <form onSubmit={load} className="grid-2">
+          <Field label="Scheme">
+            <select value={schemeId} onChange={(e) => setSchemeId(e.target.value)}>
+              <option value="">All schemes</option>
+              {schemes.map((s) => (
+                <option key={s.schemeId} value={s.schemeId}>{s.name} · {s.schemeId}</option>
+              ))}
+            </select>
+          </Field>
+          <div className="actions"><button className="primary" type="submit">Load</button></div>
+        </form>
+      )}
       <table>
         <thead>
           <tr>

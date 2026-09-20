@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { connectDb, disconnectDb } from "../db/connect.js";
+import { config, redactedMongoUri } from "../config.js";
 import { syncAllIndexes } from "../db/syncIndexes.js";
+import { hashPassword } from "../auth/password.js";
 import {
   Family,
   Member,
@@ -12,17 +14,28 @@ import {
   Beneficiary,
   MutationLog
 } from "../models/index.js";
+import { issueForScheme } from "../services/schemeOfficerService.js";
 
-const FAMILY_ID = "GJ-F-48291753-6";
-const RAMESH = "GJ-M-1001001001-1";
-const SITA = "GJ-M-1001001002-2";
-const AMIT = "GJ-M-1001001003-3";
-const BHARAT = "GJ-M-1001001004-4";
-const KAVITA = "GJ-M-1001001005-5";
+const FAMILY_ID = "GJ-F-48291753";
+const RAMESH = "GJ-M-1001001001";
+const SITA = "GJ-M-1001001002";
+const AMIT = "GJ-M-1001001003";
+const BHARAT = "GJ-M-1001001004";
+const KAVITA = "GJ-M-1001001005";
 const FOUNDING = "2010-01-01";
 
 async function reset() {
-  await mongoose.connection.dropDatabase();
+  if (!config.seedReset) {
+    throw new Error(
+      `Refusing to wipe ${config.dbName} (${redactedMongoUri()}). Set SEED_RESET=true in .env if you want to reload demo data.`
+    );
+  }
+  console.log(`SEED_RESET=true · clearing collections in ${config.dbName}`);
+  const cols = await mongoose.connection.db.listCollections().toArray();
+  for (const { name } of cols) {
+    if (name.startsWith("system.")) continue;
+    await mongoose.connection.db.collection(name).deleteMany({});
+  }
 }
 
 async function seedPatelFamily() {
@@ -33,7 +46,8 @@ async function seedPatelFamily() {
     village: "Kudasan",
     taluka: "Gandhinagar",
     district: "Gandhinagar",
-    createdOn: FOUNDING
+    createdOn: FOUNDING,
+    passwordHash: await hashPassword("Head@123")
   });
 
   await Member.insertMany([
@@ -115,7 +129,7 @@ async function seedPatelFamily() {
   });
 
   await MutationLog.create({
-    mutationId: "GJ-X-00000001-8",
+    mutationId: "GJ-X-00000001",
     familyId: FAMILY_ID,
     kind: "REGISTER_FAMILY",
     officerId: "REG-SEED",
@@ -123,9 +137,9 @@ async function seedPatelFamily() {
   });
 }
 
-const DESAI_FAMILY = "GJ-F-61002847-3";
-const MAHESH = "GJ-M-2002002001-2";
-const ROHAN = "GJ-M-2002002002-3";
+const DESAI_FAMILY = "GJ-F-61002847";
+const MAHESH = "GJ-M-2002002001";
+const ROHAN = "GJ-M-2002002002";
 
 async function seedDesaiFamily() {
   await Family.create({
@@ -135,7 +149,8 @@ async function seedDesaiFamily() {
     village: "Sargasan",
     taluka: "Gandhinagar",
     district: "Gandhinagar",
-    createdOn: FOUNDING
+    createdOn: FOUNDING,
+    passwordHash: await hashPassword("Head@123")
   });
   await Member.insertMany([
     {
@@ -187,7 +202,8 @@ async function seedSchemes() {
       minAge: null,
       maxAge: null,
       gender: "ANY",
-      requiresWidow: false
+      requiresWidow: false,
+      summary: "Foodgrain entitlement for the whole household under the Public Distribution System."
     },
     {
       schemeId: "GJ-S-EDU-MEM-0001",
@@ -198,31 +214,46 @@ async function seedSchemes() {
       minAge: 6,
       maxAge: 25,
       gender: "ANY",
-      requiresWidow: false
+      requiresWidow: false,
+      summary: "Education support for one student in the family, aged 6 to 25 years."
     },
     {
       schemeId: "GJ-S-PEN-MEM-0001",
       name: "Old-age Pension",
-      domain: "PEN",
+      domain: "SOCIAL",
       appliesTo: "MEMBER",
       status: "OPEN",
       minAge: 60,
       maxAge: null,
       gender: "ANY",
-      requiresWidow: false
+      requiresWidow: false,
+      summary: "Monthly pension for one living member of the household aged 60 years or above."
     },
     {
       schemeId: "GJ-S-WID-MEM-0001",
       name: "Widow Pension",
-      domain: "WID",
+      domain: "WCD",
       appliesTo: "MEMBER",
       status: "OPEN",
       minAge: null,
       maxAge: null,
       gender: "F",
-      requiresWidow: true
+      requiresWidow: true,
+      summary: "Pension for a woman in the household whose spouse is recorded as deceased."
     }
   ]);
+}
+
+async function seedSchemeOfficers() {
+  const desks = [
+    ["GJ-S-FOOD-FAM-0001", "Ration (PDS)", "so.food-fam-0001", "Off@1001", "SO-FOOD-1"],
+    ["GJ-S-EDU-MEM-0001", "School Scholarship", "so.edu-mem-0001", "Off@1002", "SO-EDU-1"],
+    ["GJ-S-PEN-MEM-0001", "Old-age Pension", "so.pen-mem-0001", "Off@1003", "SO-PEN-1"],
+    ["GJ-S-WID-MEM-0001", "Widow Pension", "so.wid-mem-0001", "Off@1004", "SO-WID-1"]
+  ];
+  for (const [schemeId, schemeName, username, password, officerId] of desks) {
+    await issueForScheme({ schemeId, schemeName, username, password, officerId });
+  }
 }
 
 async function main() {
@@ -232,10 +263,11 @@ async function main() {
   await seedPatelFamily();
   await seedDesaiFamily();
   await seedSchemes();
+  await seedSchemeOfficers();
   console.log("Seeded Patel household", FAMILY_ID);
   console.log("Head:", RAMESH, "Ramesh Patel");
   console.log("Seeded Desai household", DESAI_FAMILY, "(Rohan Desai for marriage-in demo)");
-  console.log("Schemes: 4 OPEN");
+  console.log("Schemes: 4 OPEN + 4 scheme officer desks");
   await disconnectDb();
 }
 

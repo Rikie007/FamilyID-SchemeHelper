@@ -3,7 +3,7 @@ import { api } from "../../api/http.js";
 import { useSession } from "../../session/SessionContext.jsx";
 import { Banner, Field } from "../../components/Field.jsx";
 
-const PATEL = "GJ-F-48291753-6";
+const PATEL = "GJ-F-48291753";
 
 export function RegistryMutations() {
   const { session } = useSession();
@@ -14,26 +14,19 @@ export function RegistryMutations() {
     fullName: "",
     gender: "M",
     dob: "",
-    fatherMemberId: "GJ-M-1001001003-3",
+    fatherMemberId: "GJ-M-1001001003",
     proofNote: "Birth certificate seen"
   });
   const [wife, setWife] = useState({
     toFamilyId: PATEL,
-    husbandMemberId: "GJ-M-1001001003-3",
-    fullName: "",
-    dob: "",
+    husbandMemberId: "GJ-M-1001001003",
+    wifeMemberId: "",
     proofNote: "Marriage certificate seen"
   });
-  const [out, setOut] = useState({
-    fromFamilyId: PATEL,
-    toFamilyId: "GJ-F-61002847-3",
-    memberId: "GJ-M-1001001005-5",
-    spouseOfMemberId: "GJ-M-2002002002-3",
-    proofNote: "Marriage certificate seen"
-  });
+  const [wifeHint, setWifeHint] = useState("");
   const [death, setDeath] = useState({
     familyId: PATEL,
-    memberId: "GJ-M-1001001001-1",
+    memberId: "GJ-M-1001001001",
     deathDate: "",
     proofNote: "Death certificate seen"
   });
@@ -80,58 +73,68 @@ export function RegistryMutations() {
       </div>
 
       <div className="card">
-        <h2>Son marries in-house (joint family)</h2>
-        <p className="lead">New wife joins this Family ID. openedHow = MARRIAGE_IN. Son stays.</p>
+        <h2>Record marriage</h2>
+        <p className="lead">
+          One event. The wife is identified by Member ID. That ID leaves her father’s house (LEFT / MARRIAGE_OUT)
+          and joins the husband’s Family ID (ACTIVE / MARRIAGE_IN). The son stays. No second form is needed.
+        </p>
         <div className="grid-2">
-          <Field label="Family ID"><input value={wife.toFamilyId} onChange={(e) => setWife({ ...wife, toFamilyId: e.target.value })} /></Field>
-          <Field label="Husband Member ID"><input value={wife.husbandMemberId} onChange={(e) => setWife({ ...wife, husbandMemberId: e.target.value })} /></Field>
-          <Field label="Wife name"><input value={wife.fullName} onChange={(e) => setWife({ ...wife, fullName: e.target.value })} /></Field>
-          <Field label="Wife DOB"><input type="date" value={wife.dob} onChange={(e) => setWife({ ...wife, dob: e.target.value })} /></Field>
-          <Field label="Proof note"><input value={wife.proofNote} onChange={(e) => setWife({ ...wife, proofNote: e.target.value })} /></Field>
+          <Field label="Husband&apos;s Family ID" required>
+            <input value={wife.toFamilyId} onChange={(e) => setWife({ ...wife, toFamilyId: e.target.value })} />
+          </Field>
+          <Field label="Husband Member ID" required>
+            <input value={wife.husbandMemberId} onChange={(e) => setWife({ ...wife, husbandMemberId: e.target.value })} />
+          </Field>
+          <Field label="Wife Member ID" required>
+            <input
+              value={wife.wifeMemberId}
+              onChange={(e) => { setWifeHint(""); setWife({ ...wife, wifeMemberId: e.target.value }); }}
+              placeholder="GJ-M-…"
+            />
+          </Field>
+          <Field label="Proof note" required>
+            <input value={wife.proofNote} onChange={(e) => setWife({ ...wife, proofNote: e.target.value })} />
+          </Field>
         </div>
+        {wifeHint ? <p className="notice">{wifeHint}</p> : null}
         <div className="actions">
+          <button
+            className="ghost"
+            type="button"
+            onClick={() =>
+              run("Check wife", async () => {
+                const id = wife.wifeMemberId.trim();
+                if (!id) throw new Error("Wife Member ID required");
+                const hits = await api(`/register/lookup?q=${encodeURIComponent(id)}`, { session });
+                if (!hits.length) throw new Error("No ACTIVE household for that Member ID");
+                const dossier = await api(`/register/families/${encodeURIComponent(hits[0].familyId)}`, { session });
+                const row = dossier.members.find((m) => m.memberId === id && m.status === "ACTIVE");
+                const name = row?.member?.fullName || "Unknown";
+                setWifeHint(`${name} · now in ${hits[0].familyId} (${hits[0].village})`);
+                return { memberId: id, fullName: name, familyId: hits[0].familyId };
+              })
+            }
+          >
+            Check Member ID
+          </button>
           <button
             className="primary"
             onClick={() =>
-              run("Wife in", () =>
+              run("Marriage", () =>
                 api("/register/marriages", {
                   method: "POST",
                   session,
                   body: {
                     toFamilyId: wife.toFamilyId,
                     spouseOfMemberId: wife.husbandMemberId,
-                    fullName: wife.fullName,
-                    dob: wife.dob,
+                    wifeMemberId: wife.wifeMemberId.trim(),
                     proofNote: wife.proofNote
                   }
                 })
               )
             }
           >
-            Commit marriage-in
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Daughter marries out</h2>
-        <p className="lead">Natal membership LEFT / MARRIAGE_OUT. Same Member ID becomes ACTIVE in husband’s house.</p>
-        <div className="grid-2">
-          <Field label="From Family ID"><input value={out.fromFamilyId} onChange={(e) => setOut({ ...out, fromFamilyId: e.target.value })} /></Field>
-          <Field label="To Family ID"><input value={out.toFamilyId} onChange={(e) => setOut({ ...out, toFamilyId: e.target.value })} /></Field>
-          <Field label="Daughter Member ID"><input value={out.memberId} onChange={(e) => setOut({ ...out, memberId: e.target.value })} /></Field>
-          <Field label="Husband Member ID"><input value={out.spouseOfMemberId} onChange={(e) => setOut({ ...out, spouseOfMemberId: e.target.value })} /></Field>
-        </div>
-        <div className="actions">
-          <button
-            className="primary"
-            onClick={() =>
-              run("Marry out", () =>
-                api("/register/marriages", { method: "POST", session, body: out })
-              )
-            }
-          >
-            Commit marriage-out
+            Commit marriage
           </button>
         </div>
       </div>

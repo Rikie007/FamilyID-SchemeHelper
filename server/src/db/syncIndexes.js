@@ -7,7 +7,8 @@ import {
   Scheme,
   Application,
   Beneficiary,
-  MutationLog
+  MutationLog,
+  SchemeOfficer
 } from "../models/index.js";
 
 const MODELS = [
@@ -19,7 +20,8 @@ const MODELS = [
   Scheme,
   Application,
   Beneficiary,
-  MutationLog
+  MutationLog,
+  SchemeOfficer
 ];
 
 export async function syncAllIndexes() {

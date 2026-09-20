@@ -165,6 +165,7 @@ Empty FK = `""`. Required = must be present (empty string still counts as presen
 | `taluka` | string | yes | | |
 | `district` | string | yes | | |
 | `createdAt` | date | yes | | |
+| `passwordHash` | string | yes | | bcrypt hash of the Head login password. Never store plaintext. Never return on APIs. |
 
 ### 4.2 `members`
 
@@ -398,7 +399,7 @@ All five memberships: `status=ACTIVE`, `openedHow=FOUNDING`, `closedHow=""`, `fr
 - Embedded `members[]` as the only household copy
 - Proof files / GridFS
 - Raw Aadhaar
-- Login `users` collection (MVP)
+- Login `users` collection (MVP). Head password lives on `families.passwordHash` (bcrypt), never plaintext.
 
 ---
 
@@ -409,3 +410,4 @@ All five memberships: `status=ACTIVE`, `openedHow=FOUNDING`, `closedHow=""`, `fr
 | 0.1 | 2026-09-20 | Collections, indexes, partial uniques, Docker. |
 | 0.2 | 2026-09-20 | ER diagram with attributes; PK/FK attribute tables; flattened village/taluka/district; Patel worked example. |
 | 0.3 | 2026-09-20 | Membership: replaced vague `reason` with `openedHow` + `closedHow`. Head tenure: `startedHow`. |
+| 0.4 | 2026-09-20 | `families.passwordHash` (bcrypt). Plaintext Head password is not stored. |

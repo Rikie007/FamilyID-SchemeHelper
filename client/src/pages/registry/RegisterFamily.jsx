@@ -11,7 +11,8 @@ const empty = {
   headName: "",
   headGender: "M",
   headDob: "",
-  proofNote: ""
+  proofNote: "",
+  password: ""
 };
 
 export function RegisterFamily() {
@@ -38,6 +39,7 @@ export function RegisterFamily() {
           district: form.district,
           contactPhone: form.contactPhone,
           proofNote: form.proofNote,
+          password: form.password,
           head: {
             fullName: form.headName,
             gender: form.headGender,
@@ -46,7 +48,7 @@ export function RegisterFamily() {
           }
         }
       });
-      setInfo(`Registered ${result.familyId}. Head member ${result.headMemberId}.`);
+      setInfo(`Registered ${result.familyId}. Head member ${result.headMemberId}. Give the Family ID and login password to the head.`);
     } catch (err) {
       setError(err.message);
     }
@@ -89,6 +91,16 @@ export function RegisterFamily() {
           </Field>
           <Field label="Proof note" required>
             <textarea value={form.proofNote} onChange={(e) => set("proofNote", e.target.value)} placeholder="What was seen at the counter" />
+          </Field>
+          <Field label="Head login password" required>
+            <input
+              type="password"
+              minLength={8}
+              autoComplete="new-password"
+              value={form.password}
+              onChange={(e) => set("password", e.target.value)}
+              placeholder="Min 8 characters. Stored hashed."
+            />
           </Field>
         </div>
         <div className="actions">

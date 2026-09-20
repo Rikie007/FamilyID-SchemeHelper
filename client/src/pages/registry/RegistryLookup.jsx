@@ -65,7 +65,7 @@ export function FamilyDossier({ familyId }) {
 
 export function RegistryLookup() {
   const { session } = useSession();
-  const [q, setQ] = useState("GJ-F-48291753-6");
+  const [q, setQ] = useState("GJ-F-48291753");
   const [hits, setHits] = useState([]);
   const [openId, setOpenId] = useState("");
   const [error, setError] = useState("");

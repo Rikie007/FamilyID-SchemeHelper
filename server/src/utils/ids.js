@@ -1,18 +1,3 @@
-function luhnCheckDigit(numStr) {
-  let sum = 0;
-  let alt = true;
-  for (let i = numStr.length - 1; i >= 0; i -= 1) {
-    let n = Number(numStr[i]);
-    if (alt) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alt = !alt;
-  }
-  return String((10 - (sum % 10)) % 10);
-}
-
 function randomDigits(n) {
   let s = "";
   for (let i = 0; i < n; i += 1) s += String(Math.floor(Math.random() * 10));
@@ -20,13 +5,11 @@ function randomDigits(n) {
 }
 
 export function newFamilyId() {
-  const body = randomDigits(8);
-  return `GJ-F-${body}-${luhnCheckDigit(body)}`;
+  return `GJ-F-${randomDigits(8)}`;
 }
 
 export function newMemberId() {
-  const body = randomDigits(10);
-  return `GJ-M-${body}-${luhnCheckDigit(body)}`;
+  return `GJ-M-${randomDigits(10)}`;
 }
 
 export function newSchemeId(domain, appliesTo) {
@@ -36,13 +19,23 @@ export function newSchemeId(domain, appliesTo) {
 }
 
 export function newApplicationId() {
-  const body = randomDigits(10);
-  return `GJ-A-${body}-${luhnCheckDigit(body)}`;
+  return `GJ-A-${randomDigits(10)}`;
 }
 
 export function newMutationId() {
-  const body = randomDigits(8);
-  return `GJ-X-${body}-${luhnCheckDigit(body)}`;
+  return `GJ-X-${randomDigits(8)}`;
+}
+
+export function newOfficerId() {
+  return `SO-${randomDigits(6)}`;
+}
+
+export function officerUsernameFor(schemeId) {
+  return `so.${String(schemeId || "").replace(/^GJ-S-/i, "").toLowerCase()}`;
+}
+
+export function newOfficerPassword() {
+  return `Off@${randomDigits(4)}`;
 }
 
 export function today() {

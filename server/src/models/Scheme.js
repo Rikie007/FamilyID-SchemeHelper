@@ -10,7 +10,8 @@ const schemeSchema = new mongoose.Schema(
     minAge: { type: Number, default: null },
     maxAge: { type: Number, default: null },
     gender: { type: String, enum: ["ANY", "M", "F"], default: "ANY" },
-    requiresWidow: { type: Boolean, default: false }
+    requiresWidow: { type: Boolean, default: false },
+    summary: { type: String, default: "" }
   },
   { collection: "schemes", timestamps: false }
 );

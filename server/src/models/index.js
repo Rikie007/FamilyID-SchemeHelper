@@ -7,3 +7,4 @@ export { Scheme } from "./Scheme.js";
 export { Application } from "./Application.js";
 export { Beneficiary } from "./Beneficiary.js";
 export { MutationLog } from "./MutationLog.js";
+export { SchemeOfficer } from "./SchemeOfficer.js";

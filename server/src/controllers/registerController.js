@@ -2,6 +2,7 @@ import { asyncHandler } from "../http.js";
 import { ROLES } from "../config.js";
 import * as registerService from "../services/registerService.js";
 import * as applicationService from "../services/applicationService.js";
+import { schemeScopeFor } from "../services/schemeOfficerService.js";
 
 export const createFamily = asyncHandler(async (req, res) => {
   const result = await registerService.registerFamily(req.body, req.actor.officerId);
@@ -16,7 +17,11 @@ export const getFamily = asyncHandler(async (req, res) => {
     throw err;
   }
   const includeHistory = req.actor.role !== ROLES.HEAD;
-  const dossier = await applicationService.familyDossier(familyId, { includeHistory });
+  const scope = await schemeScopeFor(req.actor);
+  const dossier = await applicationService.familyDossier(familyId, {
+    includeHistory,
+    schemeId: scope || undefined
+  });
   res.json(dossier);
 });
 

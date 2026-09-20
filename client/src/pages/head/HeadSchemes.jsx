@@ -44,8 +44,9 @@ export function HeadSchemes() {
         <div key={row.scheme.schemeId} className="card" style={{ boxShadow: "none" }}>
           <h2>{row.scheme.name}</h2>
           <p className="lead">
-            {row.scheme.schemeId} · {row.scheme.appliesTo} · {row.scheme.domain}
+            {row.scheme.appliesTo === "FAMILY" ? "Whole household" : "One person in the household"}
           </p>
+          {row.scheme.summary ? <p className="notice">{row.scheme.summary}</p> : null}
           {row.scheme.appliesTo === "FAMILY" ? (
             <div className="actions">
               <StatusChip value={row.verdict} />

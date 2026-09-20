@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SessionProvider, useSession } from "./session/SessionContext.jsx";
-import { GovShell } from "./layout/GovShell.jsx";
+import { GovShell, NAV } from "./layout/GovShell.jsx";
+import { LoginPage } from "./pages/LoginPage.jsx";
 import { HeadFamily } from "./pages/head/HeadFamily.jsx";
 import { HeadSchemes } from "./pages/head/HeadSchemes.jsx";
 import { HeadApplications } from "./pages/head/HeadApplications.jsx";
@@ -10,9 +11,19 @@ import { RegistryMutations } from "./pages/registry/RegistryMutations.jsx";
 import { CreatorSchemes } from "./pages/creator/CreatorSchemes.jsx";
 import { OfficerInbox, OfficerBeneficiaries } from "./pages/officer/OfficerDesk.jsx";
 
+function firstPage(role) {
+  return (NAV[role] && NAV[role][0][0]) || "family";
+}
+
 function Screen() {
   const { session } = useSession();
-  const [page, setPage] = useState("family");
+  const [page, setPage] = useState(() => firstPage(session?.role));
+
+  useEffect(() => {
+    if (session?.role) setPage(firstPage(session.role));
+  }, [session?.role]);
+
+  if (!session) return <LoginPage />;
 
   let body = null;
   if (session.role === "HEAD") {

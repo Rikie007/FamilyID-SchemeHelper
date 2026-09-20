@@ -10,7 +10,8 @@ export default defineConfig({
       "/register": "http://127.0.0.1:4000",
       "/schemes": "http://127.0.0.1:4000",
       "/me": "http://127.0.0.1:4000",
-      "/officer": "http://127.0.0.1:4000"
+      "/officer": "http://127.0.0.1:4000",
+      "/auth": "http://127.0.0.1:4000"
     }
   }
 });
