@@ -1,0 +1,142 @@
+:root {
+  --navy: #0b2a4a;
+  --navy-2: #123a63;
+  --gov-blue: #1a5f9e;
+  --saffron: #ff9933;
+  --india-green: #138808;
+  --paper: #f4f6f8;
+  --card: #ffffff;
+  --ink: #122033;
+  --muted: #5b6b7c;
+  --line: #d5dde6;
+  --danger: #b42318;
+  --ok: #157347;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; }
+body {
+  font-family: "Segoe UI", "Noto Sans", "Nirmala UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.tricolor { height: 6px; display: flex; }
+.tricolor span { flex: 1; }
+.tricolor .saffron { background: var(--saffron); }
+.tricolor .white { background: #fff; }
+.tricolor .green { background: var(--india-green); }
+
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 12px 20px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand strong { font-size: 1.15rem; letter-spacing: 0.02em; }
+.brand small { opacity: 0.85; font-size: 0.78rem; }
+.role-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.role-box label { font-size: 0.75rem; display: flex; flex-direction: column; gap: 4px; }
+.role-box select, .role-box input {
+  min-height: 40px;
+  min-width: 160px;
+  border: 1px solid #3b5a7a;
+  background: var(--navy-2);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 2px;
+}
+
+.nav {
+  background: var(--gov-blue);
+  display: flex;
+  flex-wrap: wrap;
+}
+.nav button {
+  background: transparent;
+  color: #fff;
+  border: 0;
+  min-height: 44px;
+  padding: 0 18px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.nav button.active, .nav button:hover { background: #0f4a80; }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 18px 18px 20px;
+  margin-bottom: 16px;
+}
+.card h2 { margin: 0 0 6px; font-size: 1.15rem; color: var(--navy); }
+.card p.lead { margin: 0 0 14px; color: var(--muted); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 800px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; font-weight: 600; }
+label.field span.req { color: var(--danger); }
+input, select, textarea {
+  min-height: 44px;
+  border: 1px solid #9aa8b6;
+  padding: 8px 10px;
+  font: inherit;
+  border-radius: 2px;
+}
+textarea { min-height: 88px; }
+button.primary, button.ghost, button.danger, button.ok {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+  border-radius: 2px;
+}
+button.primary { background: var(--gov-blue); color: #fff; }
+button.ok { background: var(--ok); color: #fff; }
+button.danger { background: var(--danger); color: #fff; }
+button.ghost { background: #e8eef4; color: var(--navy); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 10px 8px; vertical-align: top; }
+th { background: #eef3f8; color: var(--navy); font-size: 0.78rem; letter-spacing: 0.03em; text-transform: uppercase; }
+.id { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; }
+
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.chip.ok { background: #d1fadf; color: #05603a; }
+.chip.warn { background: #ffead5; color: #b54708; }
+.chip.bad { background: #fee4e2; color: #b42318; }
+.chip.idle { background: #e8eef4; color: #344054; }
+
+.banner { padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--line); }
+.banner.err { background: #fef3f2; border-color: #fecdca; color: var(--danger); }
+.banner.info { background: #eff8ff; border-color: #b2ddff; color: var(--navy); }
+
+.kvs { display: grid; grid-template-columns: 160px 1fr; gap: 6px 12px; font-size: 0.95rem; }
+.kvs dt { color: var(--muted); }
+.kvs dd { margin: 0; font-weight: 600; }
+
+.footer {
+  background: var(--navy);
+  color: #c9d5e2;
+  padding: 16px 20px;
+  font-size: 0.8rem;
+}
+.notice { font-size: 0.82rem; color: var(--muted); }
