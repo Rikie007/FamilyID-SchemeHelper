@@ -3,6 +3,7 @@ import { api } from "../../api/http.js";
 import { useSession } from "../../session/SessionContext.jsx";
 import { Banner } from "../../components/Field.jsx";
 import { StatusChip } from "../../components/StatusChip.jsx";
+import { Lifecycle } from "../officer/Lifecycle.jsx";
 
 export function HeadApplications() {
   const { session } = useSession();
@@ -26,17 +27,23 @@ export function HeadApplications() {
             <th>Scheme</th>
             <th>Member</th>
             <th>Status</th>
-            <th>Applied</th>
+            <th>Lifecycle</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.applicationId}>
               <td className="id">{r.applicationId}</td>
-              <td className="id">{r.schemeId}</td>
-              <td>{r.memberId || "Family"}</td>
+              <td>
+                {r.schemeName || r.schemeId}
+                <div className="id">{r.schemeId}</div>
+              </td>
+              <td>{r.memberName || r.memberId || "Family"}</td>
               <td><StatusChip value={r.status} /></td>
-              <td>{r.appliedOn}</td>
+              <td>
+                {r.appliedOn}
+                <Lifecycle steps={r.lifecycle} />
+              </td>
             </tr>
           ))}
         </tbody>

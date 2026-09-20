@@ -10,6 +10,7 @@ import { RegisterFamily } from "./pages/registry/RegisterFamily.jsx";
 import { RegistryMutations } from "./pages/registry/RegistryMutations.jsx";
 import { CreatorSchemes } from "./pages/creator/CreatorSchemes.jsx";
 import { OfficerInbox, OfficerBeneficiaries } from "./pages/officer/OfficerDesk.jsx";
+import { OfficerOverview } from "./pages/officer/OfficerOverview.jsx";
 
 function firstPage(role) {
   return (NAV[role] && NAV[role][0][0]) || "family";
@@ -36,7 +37,8 @@ function Screen() {
     else body = <RegistryLookup />;
   } else if (session.role === "SCHEME_CREATOR") {
     body = <CreatorSchemes />;
-  } else if (page === "ben") body = <OfficerBeneficiaries />;
+  } else if (page === "overview") body = <OfficerOverview />;
+  else if (page === "ben") body = <OfficerBeneficiaries />;
   else if (page === "lookup") body = <RegistryLookup />;
   else body = <OfficerInbox />;
 

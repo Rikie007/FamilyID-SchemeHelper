@@ -3,11 +3,12 @@ import { api } from "../../api/http.js";
 import { useSession } from "../../session/SessionContext.jsx";
 import { Banner, Field } from "../../components/Field.jsx";
 import { StatusChip } from "../../components/StatusChip.jsx";
+import { Lifecycle } from "./Lifecycle.jsx";
 import { FamilyDossier } from "../registry/RegistryLookup.jsx";
 
 export function OfficerInbox() {
   const { session } = useSession();
-  const [status, setStatus] = useState("PENDING");
+  const [status, setStatus] = useState("ALL");
   const [rows, setRows] = useState([]);
   const [rejectNote, setRejectNote] = useState("");
   const [openFamily, setOpenFamily] = useState("");
@@ -49,15 +50,16 @@ export function OfficerInbox() {
         <h2>{session.schemeId ? `${session.schemeName || "Scheme"} inbox` : "Application inbox"}</h2>
         <p className="lead">
           {session.schemeId
-            ? "This desk only sees applications for its own scheme. Scheme Manager can see every scheme."
-            : "Scheme Manager: applications from every announced scheme. Verify against the register, then approve or reject."}
+            ? "Follow each application from receipt to benefit for this scheme."
+            : "Follow each application from receipt to benefit. Scheme Manager sees every scheme."}
         </p>
         <Banner error={error} info={info} />
         <Field label="Status filter">
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option>PENDING</option>
-            <option>APPROVED</option>
-            <option>REJECTED</option>
+            <option value="ALL">All</option>
+            <option value="PENDING">PENDING</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
           </select>
         </Field>
         <table style={{ marginTop: 12 }}>
@@ -67,6 +69,7 @@ export function OfficerInbox() {
               <th>Scheme</th>
               <th>Family / member</th>
               <th>Status</th>
+              <th>Lifecycle</th>
               <th></th>
             </tr>
           </thead>
@@ -79,10 +82,14 @@ export function OfficerInbox() {
                   <div className="id">{r.schemeId}</div>
                 </td>
                 <td>
-                  {r.familyId}
-                  <div className="id">{r.memberId || "FAMILY"}</div>
+                  {r.headName || r.familyId}
+                  <div className="id">{r.familyId}{r.village ? ` · ${r.village}` : ""}</div>
+                  <div className="notice">{r.memberName}{r.memberId ? ` · ${r.memberId}` : ""}</div>
                 </td>
                 <td><StatusChip value={r.status} /></td>
+                <td>
+                  <Lifecycle steps={r.lifecycle} />
+                </td>
                 <td>
                   <button className="ghost" onClick={() => setOpenFamily(r.familyId)}>Verify</button>
                   {r.status === "PENDING" ? (
@@ -96,6 +103,7 @@ export function OfficerInbox() {
             ))}
           </tbody>
         </table>
+        {!rows.length ? <p className="notice">No applications in this filter yet.</p> : null}
         <Field label="Reject note (required for reject)">
           <input value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} />
         </Field>
@@ -129,50 +137,57 @@ export function OfficerBeneficiaries() {
       api("/schemes", { session }).then(setSchemes).catch(() => {});
     }
     load().catch(() => {});
-  }, [session.role, session.schemeId, session.officerId]);
+  }, [session.role, session.schemeId, session.officerId, schemeId]);
 
   return (
     <div className="card">
-      <h2>{scoped ? `${session.schemeName || "Scheme"} beneficiaries` : "Who is taking the benefit"}</h2>
+      <h2>{scoped ? `${session.schemeName || "Scheme"} — taking the benefit` : "Who is taking the benefit"}</h2>
       <p className="lead">
         {scoped
-          ? "Only families enrolled on this scheme."
-          : "Scheme Manager can list every scheme, or pick one."}
+          ? `${rows.length} household or member currently enrolled on this scheme.`
+          : `${rows.length} enrolled across the selected schemes. This is the live beneficiary list after approval.`}
       </p>
       <Banner error={error} />
       {scoped ? null : (
-        <form onSubmit={load} className="grid-2">
-          <Field label="Scheme">
-            <select value={schemeId} onChange={(e) => setSchemeId(e.target.value)}>
-              <option value="">All schemes</option>
-              {schemes.map((s) => (
-                <option key={s.schemeId} value={s.schemeId}>{s.name} · {s.schemeId}</option>
-              ))}
-            </select>
-          </Field>
-          <div className="actions"><button className="primary" type="submit">Load</button></div>
-        </form>
+        <Field label="Scheme">
+          <select value={schemeId} onChange={(e) => setSchemeId(e.target.value)}>
+            <option value="">All schemes</option>
+            {schemes.map((s) => (
+              <option key={s.schemeId} value={s.schemeId}>{s.name} · {s.schemeId}</option>
+            ))}
+          </select>
+        </Field>
       )}
       <table>
         <thead>
           <tr>
             <th>Scheme</th>
-            <th>Family</th>
-            <th>Member</th>
+            <th>Household</th>
+            <th>Who receives</th>
             <th>Enrolled</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={r.schemeId + r.familyId + r.memberId + i}>
-              <td className="id">{r.schemeId}</td>
-              <td className="id">{r.familyId}</td>
-              <td>{r.memberId || "FAMILY"}</td>
+              <td>
+                {r.schemeName || r.schemeId}
+                <div className="id">{r.schemeId}</div>
+              </td>
+              <td>
+                {r.headName || r.familyId}
+                <div className="id">{r.familyId}{r.village ? ` · ${r.village}` : ""}</div>
+              </td>
+              <td>
+                {r.consumerName || (r.memberId || "FAMILY")}
+                {r.memberId ? <div className="id">{r.memberId}</div> : null}
+              </td>
               <td>{r.enrolledOn}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      {!rows.length ? <p className="notice">Nobody is enrolled on this selection yet. Approve an application to add them here.</p> : null}
     </div>
   );
 }

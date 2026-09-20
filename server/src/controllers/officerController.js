@@ -44,3 +44,9 @@ export const beneficiaries = asyncHandler(async (req, res) => {
   });
   res.json(rows);
 });
+
+export const overview = asyncHandler(async (req, res) => {
+  const scope = await schemeScopeFor(req.actor);
+  const board = await applicationService.schemeDeskOverview(scope || req.query.schemeId || "");
+  res.json(board);
+});

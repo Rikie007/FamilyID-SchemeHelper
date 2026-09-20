@@ -49,14 +49,118 @@ export async function apply(familyId, body, actorFamilyId) {
 
 export async function listApplications(query) {
   const q = {};
-  if (query.status) q.status = query.status;
+  if (query.status && query.status !== "ALL") q.status = query.status;
   if (query.schemeId) q.schemeId = query.schemeId;
   if (query.familyId) q.familyId = query.familyId;
   const rows = await Application.find(q).sort({ appliedOn: -1 }).lean();
-  const ids = [...new Set(rows.map((r) => r.schemeId))];
-  const schemes = ids.length ? await Scheme.find({ schemeId: { $in: ids } }).lean() : [];
-  const names = Object.fromEntries(schemes.map((s) => [s.schemeId, s.name]));
-  return rows.map((r) => ({ ...r, schemeName: names[r.schemeId] || r.schemeId }));
+  return decorateApplications(rows);
+}
+
+function lifecycleFor(app, enrolledOn) {
+  const applied = { key: "applied", label: "Application received", at: app.appliedOn, state: "done" };
+  if (app.status === "PENDING") {
+    return [
+      applied,
+      { key: "review", label: "Under verification", at: "", state: "current" },
+      { key: "decision", label: "Decision", at: "", state: "wait" },
+      { key: "benefit", label: "Receiving the scheme", at: "", state: "wait" }
+    ];
+  }
+  if (app.status === "REJECTED") {
+    return [
+      applied,
+      { key: "review", label: "Verified", at: app.decidedOn, state: "done" },
+      { key: "decision", label: "Rejected", at: app.decidedOn, state: "skip", note: app.rejectNote },
+      { key: "benefit", label: "Not enrolled", at: "", state: "wait" }
+    ];
+  }
+  return [
+    applied,
+    { key: "review", label: "Verified", at: app.decidedOn, state: "done" },
+    { key: "decision", label: "Approved", at: app.decidedOn, state: "done" },
+    {
+      key: "benefit",
+      label: enrolledOn ? "Receiving the scheme" : "Enrolment pending",
+      at: enrolledOn || "",
+      state: enrolledOn ? "done" : "current"
+    }
+  ];
+}
+
+async function decorateApplications(rows) {
+  if (!rows.length) return [];
+  const schemeIds = [...new Set(rows.map((r) => r.schemeId))];
+  const familyIds = [...new Set(rows.map((r) => r.familyId))];
+  const memberIds = [...new Set(rows.map((r) => r.memberId).filter(Boolean))];
+  const [schemes, families, members, bens] = await Promise.all([
+    Scheme.find({ schemeId: { $in: schemeIds } }).lean(),
+    Family.find({ familyId: { $in: familyIds } }).lean(),
+    memberIds.length ? Member.find({ memberId: { $in: memberIds } }).lean() : [],
+    Beneficiary.find({
+      $or: rows.map((r) => ({ schemeId: r.schemeId, familyId: r.familyId, memberId: r.memberId || "" }))
+    }).lean()
+  ]);
+  const schemeName = Object.fromEntries(schemes.map((s) => [s.schemeId, s.name]));
+  const village = Object.fromEntries(families.map((f) => [f.familyId, f.village]));
+  const headIds = families.map((f) => f.headMemberId).filter(Boolean);
+  const heads = headIds.length ? await Member.find({ memberId: { $in: headIds } }).lean() : [];
+  const headNameById = Object.fromEntries(heads.map((h) => [h.memberId, h.fullName]));
+  const headName = Object.fromEntries(families.map((f) => [f.familyId, headNameById[f.headMemberId] || ""]));
+  const memberName = Object.fromEntries(members.map((m) => [m.memberId, m.fullName]));
+  const enrolled = Object.fromEntries(
+    bens.map((b) => [`${b.schemeId}|${b.familyId}|${b.memberId || ""}`, b.enrolledOn])
+  );
+  return rows.map((r) => {
+    const enrolledOn = enrolled[`${r.schemeId}|${r.familyId}|${r.memberId || ""}`] || "";
+    return {
+      ...r,
+      schemeName: schemeName[r.schemeId] || r.schemeId,
+      village: village[r.familyId] || "",
+      headName: headName[r.familyId] || "",
+      memberName: r.memberId ? memberName[r.memberId] || r.memberId : "Whole household",
+      enrolledOn,
+      lifecycle: lifecycleFor(r, enrolledOn)
+    };
+  });
+}
+
+export async function schemeDeskOverview(schemeId) {
+  const schemeQ = schemeId ? { schemeId } : {};
+  const schemes = await Scheme.find(schemeQ).sort({ name: 1 }).lean();
+  const ids = schemes.map((s) => s.schemeId);
+  const appQ = schemeId ? { schemeId } : ids.length ? { schemeId: { $in: ids } } : { schemeId: "__none__" };
+  const benQ = schemeId ? { schemeId } : ids.length ? { schemeId: { $in: ids } } : { schemeId: "__none__" };
+  const [apps, bens] = await Promise.all([
+    Application.find(appQ).lean(),
+    Beneficiary.find(benQ).lean()
+  ]);
+  const rows = schemes.map((s) => {
+    const sa = apps.filter((a) => a.schemeId === s.schemeId);
+    const sb = bens.filter((b) => b.schemeId === s.schemeId);
+    return {
+      schemeId: s.schemeId,
+      name: s.name,
+      appliesTo: s.appliesTo,
+      status: s.status,
+      applications: sa.length,
+      pending: sa.filter((a) => a.status === "PENDING").length,
+      approved: sa.filter((a) => a.status === "APPROVED").length,
+      rejected: sa.filter((a) => a.status === "REJECTED").length,
+      receiving: sb.length
+    };
+  });
+  const totals = rows.reduce(
+    (acc, r) => ({
+      schemes: acc.schemes + 1,
+      applications: acc.applications + r.applications,
+      pending: acc.pending + r.pending,
+      approved: acc.approved + r.approved,
+      rejected: acc.rejected + r.rejected,
+      receiving: acc.receiving + r.receiving
+    }),
+    { schemes: 0, applications: 0, pending: 0, approved: 0, rejected: 0, receiving: 0 }
+  );
+  return { totals, schemes: rows };
 }
 
 export async function decideApplication(applicationId, action, rejectNote, officerId, allowedSchemeId) {
@@ -100,7 +204,30 @@ export async function listBeneficiaries(query) {
   const q = {};
   if (query.schemeId) q.schemeId = query.schemeId;
   if (query.familyId) q.familyId = query.familyId;
-  return Beneficiary.find(q).sort({ enrolledOn: -1 }).lean();
+  const rows = await Beneficiary.find(q).sort({ enrolledOn: -1 }).lean();
+  if (!rows.length) return [];
+  const schemeIds = [...new Set(rows.map((r) => r.schemeId))];
+  const familyIds = [...new Set(rows.map((r) => r.familyId))];
+  const memberIds = [...new Set(rows.map((r) => r.memberId).filter(Boolean))];
+  const [schemes, families, members] = await Promise.all([
+    Scheme.find({ schemeId: { $in: schemeIds } }).lean(),
+    Family.find({ familyId: { $in: familyIds } }).lean(),
+    memberIds.length ? Member.find({ memberId: { $in: memberIds } }).lean() : []
+  ]);
+  const schemeName = Object.fromEntries(schemes.map((s) => [s.schemeId, s.name]));
+  const village = Object.fromEntries(families.map((f) => [f.familyId, f.village]));
+  const memberName = Object.fromEntries(members.map((m) => [m.memberId, m.fullName]));
+  const headIds = families.map((f) => f.headMemberId).filter(Boolean);
+  const heads = headIds.length ? await Member.find({ memberId: { $in: headIds } }).lean() : [];
+  const headById = Object.fromEntries(heads.map((h) => [h.memberId, h.fullName]));
+  const headName = Object.fromEntries(families.map((f) => [f.familyId, headById[f.headMemberId] || ""]));
+  return rows.map((r) => ({
+    ...r,
+    schemeName: schemeName[r.schemeId] || r.schemeId,
+    village: village[r.familyId] || "",
+    headName: headName[r.familyId] || "",
+    consumerName: r.memberId ? memberName[r.memberId] || r.memberId : "Whole household"
+  }));
 }
 
 export async function familyDossier(familyId, { includeHistory = true, schemeId } = {}) {
@@ -123,8 +250,10 @@ export async function familyDossier(familyId, { includeHistory = true, schemeId 
     });
   }
   const schemeFilter = schemeId ? { familyId, schemeId } : { familyId };
-  const applications = await Application.find(schemeFilter).sort({ appliedOn: -1 }).lean();
-  const beneficiaries = await Beneficiary.find(schemeFilter).lean();
+  const applications = await decorateApplications(
+    await Application.find(schemeFilter).sort({ appliedOn: -1 }).lean()
+  );
+  const beneficiaries = await listBeneficiaries(schemeFilter);
   return { family, head, members, applications, beneficiaries };
 }
 

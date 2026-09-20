@@ -1,31 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../api/http.js";
 import { useSession } from "../../session/SessionContext.jsx";
 import { Banner, Field } from "../../components/Field.jsx";
 import { StatusChip } from "../../components/StatusChip.jsx";
+import { Lifecycle } from "../officer/Lifecycle.jsx";
 
 export function FamilyDossier({ familyId }) {
   const { session } = useSession();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
-  async function open() {
+  useEffect(() => {
+    setData(null);
     setError("");
-    try {
-      const d = await api(`/register/families/${encodeURIComponent(familyId)}`, { session });
-      setData(d);
-    } catch (e) {
-      setError(e.message);
-    }
-  }
+    if (!familyId) return;
+    api(`/register/families/${encodeURIComponent(familyId)}`, { session })
+      .then(setData)
+      .catch((e) => setError(e.message));
+  }, [familyId, session.role, session.officerId, session.familyId]);
 
   if (!familyId) return null;
 
   return (
     <div className="card">
-      <div className="actions" style={{ marginTop: 0 }}>
-        <button className="ghost" onClick={open}>Open household {familyId}</button>
-      </div>
       <Banner error={error} />
       {data ? (
         <>
@@ -57,6 +54,31 @@ export function FamilyDossier({ familyId }) {
               ))}
             </tbody>
           </table>
+          <h3>Scheme lifecycle for this household</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Application</th>
+                <th>Scheme</th>
+                <th>Status</th>
+                <th>Path</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.applications || []).map((r) => (
+                <tr key={r.applicationId}>
+                  <td className="id">{r.applicationId}</td>
+                  <td>
+                    {r.schemeName || r.schemeId}
+                    <div className="notice">{r.memberName || r.memberId || "Family"}</div>
+                  </td>
+                  <td><StatusChip value={r.status} /></td>
+                  <td><Lifecycle steps={r.lifecycle} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!data.applications?.length ? <p className="notice">No applications from this household yet.</p> : null}
         </>
       ) : null}
     </div>

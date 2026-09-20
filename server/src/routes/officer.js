@@ -6,6 +6,7 @@ import * as ctrl from "../controllers/officerController.js";
 const router = Router();
 
 router.get("/applications", requireRole(ROLES.SCHEME_OFFICER), ctrl.inbox);
+router.get("/overview", requireRole(ROLES.SCHEME_OFFICER), ctrl.overview);
 router.post("/applications/:id/approve", requireRole(ROLES.SCHEME_OFFICER), ctrl.approve);
 router.post("/applications/:id/reject", requireRole(ROLES.SCHEME_OFFICER), ctrl.reject);
 router.get("/beneficiaries", requireRole(ROLES.SCHEME_OFFICER), ctrl.beneficiaries);

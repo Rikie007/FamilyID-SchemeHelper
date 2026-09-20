@@ -13,8 +13,9 @@ const NAV = {
   ],
   SCHEME_CREATOR: [["schemes", "Announce schemes"]],
   SCHEME_OFFICER: [
+    ["overview", "Desk analysis"],
     ["inbox", "Application inbox"],
-    ["ben", "Beneficiaries"],
+    ["ben", "Taking the benefit"],
     ["lookup", "Family verify"]
   ]
 };
