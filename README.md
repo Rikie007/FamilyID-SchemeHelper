@@ -189,4 +189,10 @@ Announcing a new scheme appends that scheme’s officer row on the login page.
 
 ---
 
+## Deploy on Vercel
+
+Import [FamilyID-SchemeHelper](https://github.com/Rikie007/FamilyID-SchemeHelper) at [vercel.com/new](https://vercel.com/new). Keep the **root directory** as the repository root. Add `MONGO_URI` and `MONGO_DB_NAME` in the Vercel project environment (do not commit `.env`). In Atlas Network Access, allow `0.0.0.0/0` so Vercel can reach the cluster.
+
+---
+
 Built for the Pravi **Build for Billions** campus placement drive. Product rules and numbered functions live in [`docs/PRD.md`](docs/PRD.md).
